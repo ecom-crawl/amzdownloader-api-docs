@@ -1,0 +1,30 @@
+---
+title: "AmzDownloader API and MCP"
+description: "Extract Amazon product images and videos with one account. Use REST requests or MCP tools to retrieve media, check freshness and track credits."
+keywords: ["Amazon", "API", "MCP"]
+sidebarTitle: "Introduction"
+---
+
+AmzDownloader gives you structured Amazon product media through REST and MCP. Start with one product URL, then handle either an immediate cached result or a background extraction job.
+
+<Columns cols={2}>
+  <Card title="Make your first request" icon="rocket" href="/quickstart">Extract media with your AmzDownloader API key.</Card>
+  <Card title="Connect an AI agent" icon="plug" href="/mcp-guide">Use the same account and credits through MCP.</Card>
+</Columns>
+
+## Choose an interface
+
+| Interface | Address | Use it for |
+| --- | --- | --- |
+| REST | `https://amzdownloader.com/api/v1` | Application integrations and scripts |
+| MCP | `https://amzdownloader.com/mcp` | AI tools and agent workflows |
+
+Both interfaces use your AmzDownloader API key and credit balance. A successful extraction or cached media retrieval costs one credit. A successful video conversion costs one credit. Job polling, failures and idempotent replays consume no additional credits. See [usage and credits](/usage).
+
+## Understand the result
+
+Media is grouped into product images, variant images, product videos, related videos and creator videos. Source availability varies by product and marketplace. Empty groups do not prove that no media exists, and related or creator videos can depict other products.
+
+Read the returned `warnings` and source retrieval time before using a result. Extraction does not grant permission to republish source media.
+
+Check `GET /capabilities` for the operations and marketplaces enabled for the current release. The API reference tab is generated from the public OpenAPI contract.

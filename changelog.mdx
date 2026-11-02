@@ -1,0 +1,16 @@
+---
+title: "API and MCP changelog"
+description: "Review the initial AmzDownloader REST and MCP contract, including extraction jobs, cached product media, playlist conversion and shared account credits."
+keywords: ["changelog", "release", "versioning"]
+sidebarTitle: "Changelog"
+---
+
+AmzDownloader API and MCP use a versioned public contract. This page records customer-visible interface changes; check the health and capabilities endpoints for current service availability.
+
+## Initial API and MCP release
+
+The initial contract covers single-product media extraction, owned job status and results, cached product media lookup, video playlist conversion and account usage.
+
+The hosted MCP endpoint exposes six tools matching those workflows. REST and MCP share API keys and the existing credit balance. Successful media retrieval and conversion each cost one credit; polling, failures and completed idempotent replays are free.
+
+Bulk extraction, a published npm package and OAuth are outside the initial contract. This source entry describes the release interface and does not establish a production deployment date.

@@ -1,0 +1,34 @@
+---
+title: "Handle errors and safe retries"
+description: "Interpret AmzDownloader HTTP errors and terminal job states, honor retry timing, preserve request IDs, and retry charged work with idempotency."
+keywords: ["errors", "retry", "idempotency"]
+sidebarTitle: "Errors and retries"
+---
+
+AmzDownloader returns an HTTP error for requests it cannot fulfill and a job status for asynchronous extraction. Check both the HTTP status and the returned job status before continuing.
+
+| HTTP status | What to do |
+| --- | --- |
+| `400` | Correct the input before retrying. |
+| `401` | Check your API key and authentication header. |
+| `402` | Check your shared account credit balance before starting new work. |
+| `403` | Check whether the account is allowed to perform the operation. |
+| `404` | Verify the resource ID, ownership or cached product selection. |
+| `409` | Resolve an idempotency conflict before starting different work. |
+| `410` | The saved result has expired; decide whether to start a new extraction. |
+| `429` | Honor `Retry-After` when provided and reduce request frequency. |
+| `5xx` | The service or source could not complete the request. Retry only within a finite budget. |
+
+Preserve the returned error code and request ID for troubleshooting. Do not log API keys or full authentication headers.
+
+## Watch terminal job states
+
+A `202` response means you must inspect the body. `queued` and `processing` can be polled again after a delay. `completed` means you can fetch the result. `failed` and `expired` are terminal; stop polling and inspect the error.
+
+Reaching your own polling deadline does not mean that the job failed or was canceled. Save the job ID and check it later instead of automatically creating another extraction.
+
+## Retry charged operations deliberately
+
+Use the same `Idempotency-Key` for a retry of the same method, path and input. Use a different key only for new work. Do not automatically retry a write without its original key after a connection interruption.
+
+When a source blocks extraction, a response may include a fallback result or guidance. Preserve source warnings and freshness information. A failed request consumes no credits. See [cache and freshness](/cache) for handling stale results.

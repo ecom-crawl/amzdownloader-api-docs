@@ -1,0 +1,16 @@
+name: Deploy to Mintlify
+on:
+  push:
+    branches: ["main"]
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: mintlify-deploy
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx mint@4.2.1184 deploy --subdomain amzdownloader

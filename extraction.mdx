@@ -1,0 +1,47 @@
+---
+title: "Select the media you need"
+description: "Choose Amazon product and variant images, product videos, related videos and creator videos while preserving warnings and bounded job polling."
+keywords: ["include", "images", "videos"]
+sidebarTitle: "Extraction"
+---
+
+AmzDownloader lets you select media categories for one Amazon product. Pass a canonical product URL to `POST /scrapes` and use `include` to choose the groups you need.
+
+```json
+{
+  "url": "https://www.amazon.com/dp/B0CRY1MG68",
+  "renderMode": "auto",
+  "refresh": false,
+  "include": {
+    "productImages": true,
+    "variantImages": true,
+    "productVideos": true,
+    "relatedVideos": true,
+    "creatorVideos": true
+  }
+}
+```
+
+Use the [quickstart](/quickstart) to send this body with authentication. The API responds with HTTP `200` and completed media when a suitable cached result exists, or HTTP `202` and an owned job to poll.
+
+## Choose categories
+
+| Include field | Result |
+| --- | --- |
+| `productImages` | Main product image collection |
+| `variantImages` | Images grouped by product variant |
+| `productVideos` | Videos associated with the product's media gallery |
+| `relatedVideos` | Related videos, which can concern other products |
+| `creatorVideos` | Creator videos surfaced on the product page |
+
+The result can also classify customer review videos separately. Preserve the categories returned by the API instead of assuming every video depicts the selected product.
+
+## Choose rendering
+
+`renderMode` accepts `auto`, `static` or `interactive`. Use `auto` for normal extraction. Static extraction can omit dynamically loaded media. Interactive rendering still depends on what Amazon exposes for the product and marketplace.
+
+Preserve `data.source.fetchedAt`, marketplace, ASIN and `data.warnings`. No rendering mode guarantees every media asset or every variant. A new extraction is asynchronous when it cannot be served immediately. Stop polling on a terminal status and set a local deadline.
+
+## Reuse a result
+
+Use `GET /products/{asin}/media` to read compatible cached media for a product. Specify the marketplace when working outside the default marketplace, and use the same selection and rendering requirements. See [cache and freshness](/cache).

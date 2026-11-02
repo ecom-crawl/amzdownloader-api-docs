@@ -1,0 +1,63 @@
+---
+title: "Extract your first product media"
+description: "Create an AmzDownloader extraction request, recognize cached results, poll an owned job, and fetch the completed media with your API key."
+keywords: ["quickstart", "scrapes", "polling"]
+sidebarTitle: "Quickstart"
+---
+
+AmzDownloader accepts one Amazon product URL per extraction request. Use a product you need, keep your key on your server, and set a finite polling budget.
+
+## Prepare your key
+
+Create or select an API key in your [dashboard](https://amzdownloader.com/dashboard). Store it in your environment:
+
+```bash
+export AMZDOWNLOADER_API_KEY="YOUR_AMZDOWNLOADER_API_KEY"
+```
+
+## Start an extraction
+
+```bash
+curl --fail-with-body --max-time 30 \
+  'https://amzdownloader.com/api/v1/scrapes' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: replace-with-a-unique-operation-id' \
+  --data '{"url":"https://www.amazon.com/dp/B0CRY1MG68","renderMode":"auto","include":{"productImages":true,"variantImages":true,"productVideos":true,"relatedVideos":true,"creatorVideos":true}}'
+```
+
+Use a different idempotency key for each new operation. Reuse the original key only when retrying the same method, path and input. Do not follow redirects with a credential-bearing request.
+
+## Handle either response
+
+HTTP `200` returns `status: "completed"` and media in `data`. HTTP `202` returns a `jobId`, `statusUrl` and `resultUrl`. The following queued response is illustrative:
+
+```json
+{
+  "status": "queued",
+  "jobId": "YOUR_JOB_ID",
+  "statusUrl": "/api/v1/scrapes/YOUR_JOB_ID",
+  "resultUrl": "/api/v1/scrapes/YOUR_JOB_ID/result",
+  "cache": { "hit": false }
+}
+```
+
+Poll the owned job using its ID:
+
+```bash
+curl --fail-with-body --max-time 30 \
+  'https://amzdownloader.com/api/v1/scrapes/YOUR_JOB_ID' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY"
+```
+
+Wait between polls and honor `Retry-After` when returned. Stop on `completed`, `failed` or `expired`, or when your local deadline is reached. A local timeout does not cancel the job. Do not submit another charged extraction just to check progress.
+
+Once the status is `completed`, fetch the result:
+
+```bash
+curl --fail-with-body --max-time 30 \
+  'https://amzdownloader.com/api/v1/scrapes/YOUR_JOB_ID/result' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY"
+```
+
+Read media from `data.media`, counts from `data.counts` and limitations from `data.warnings`. Retrieving the same owned job result does not charge another media credit. See [runnable examples](/examples) for bounded Node, Python and Go clients.

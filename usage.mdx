@@ -1,0 +1,36 @@
+---
+title: "Track usage and credits"
+description: "Check your shared AmzDownloader credit balance and understand charges for media retrieval and conversion, free polling, failures and idempotent replays."
+keywords: ["credits", "billing", "usage"]
+sidebarTitle: "Usage and credits"
+---
+
+AmzDownloader API and MCP requests share your existing account credit balance. Check `GET /usage` before starting a workflow and inspect billing metadata returned with a request.
+
+```bash
+curl --fail-with-body --max-time 30 \
+  'https://amzdownloader.com/api/v1/usage' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY"
+```
+
+The response reports your available credits and usage information. The exact fields are defined by the public OpenAPI schema. Reading usage consumes no credits.
+
+## Credit rules
+
+| Operation | Credits |
+| --- | --- |
+| Successful extraction | 1 |
+| Successful cached product media retrieval | 1 |
+| Successful video conversion, including a cached conversion | 1 |
+| Job status and owned job result retrieval | 0 additional |
+| Failed requests | 0 |
+| Replay of a completed operation with its original idempotency key | 0 additional |
+| Health, capabilities, OpenAPI and MCP initialization/discovery | 0 |
+
+An asynchronous extraction is charged once for a successful result. Polling and retrieving that job result do not add credits. A new product cache lookup is a separate media retrieval and costs one credit on success.
+
+## Retry without duplicating work
+
+For a new extraction, conversion or cached media retrieval, send a unique `Idempotency-Key`. Reuse that key only for the identical operation. A key reused with different inputs can return an idempotency conflict. Do not generate a fresh key on every retry of the same work.
+
+Account limits and request rates are separate from the credit balance. Honor `Retry-After` and keep polling bounded even for free endpoints. See [errors and retries](/errors).

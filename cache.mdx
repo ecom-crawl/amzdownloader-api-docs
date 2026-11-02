@@ -1,0 +1,34 @@
+---
+title: "Understand cache and freshness"
+description: "Read cached Amazon media, inspect retrieval time and warnings, and choose when to request a fresh extraction without unbounded retries."
+keywords: ["cache", "freshness", "refresh"]
+sidebarTitle: "Cache and freshness"
+---
+
+AmzDownloader can return cached media immediately or create a background job for fresh extraction. Inspect the result metadata before deciding whether it is recent enough for your application.
+
+## Read cached media
+
+`GET /products/{asin}/media` looks up product media by ASIN and marketplace. `include` is a comma-separated list of media categories; `renderMode` selects the rendering requirement.
+
+```bash
+curl --fail-with-body --get --max-time 30 \
+  'https://amzdownloader.com/api/v1/products/B0CRY1MG68/media' \
+  --data-urlencode 'marketplace=amazon.com' \
+  --data-urlencode 'include=productImages,variantImages' \
+  --data-urlencode 'renderMode=auto' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY" \
+  -H 'Idempotency-Key: replace-with-a-unique-cache-read-id'
+```
+
+A successful lookup returns completed media in `data` and costs one credit. A cache miss returns an error without charging a credit. Submit `POST /scrapes` if you need a new extraction. The product media endpoint is a cached read and does not silently schedule work.
+
+## Request a refresh
+
+Set `refresh: true` on `POST /scrapes` when you need a new extraction. The service can return a fallback result when a refresh is blocked. Preserve `warnings`, `cache.stale` when present, and the original `data.source.fetchedAt` rather than labeling a fallback as newly retrieved.
+
+## Work with expiring URLs
+
+Source media links can change or expire. Freshness of a media record is separate from whether every source URL still works. Do not send your API key to a returned image, video or MP4 URL. Only request and reuse source media when you have the required rights.
+
+Cache durations and current capabilities can change. Use returned timestamps and warnings, not a locally assumed retention period. See [errors and retries](/errors) if a source blocks refreshes or a stored job result expires.

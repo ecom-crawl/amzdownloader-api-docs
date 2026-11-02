@@ -1,0 +1,31 @@
+---
+title: "Run API examples in your language"
+description: "Use cURL, JavaScript, Python and Go examples to submit a product extraction, poll with a deadline, read cached media and inspect usage safely."
+keywords: ["examples", "Python", "JavaScript", "Go"]
+sidebarTitle: "Examples"
+---
+
+AmzDownloader examples call the public REST API using an environment variable. They include bounded polling and leave retries of charged operations under your control.
+
+Download or clone [amzdownloader-api-examples](https://github.com/ecom-crawl/amzdownloader-api-examples), then set `AMZDOWNLOADER_API_KEY` through your shell or secret manager.
+
+```bash
+export AMZDOWNLOADER_API_KEY="YOUR_AMZDOWNLOADER_API_KEY"
+node examples/node/extract.mjs 'https://www.amazon.com/dp/B0CRY1MG68'
+python3 examples/python/extract.py 'https://www.amazon.com/dp/B0CRY1MG68'
+```
+
+Run one example at a time. Each new successful extraction consumes one credit. A polling deadline ends the client wait without canceling the job.
+
+## Choose an example
+
+| Language | Entry point | Requirements |
+| --- | --- | --- |
+| cURL | `examples/curl/quickstart.sh` | Bash, cURL and Python 3 |
+| JavaScript | `examples/node/extract.mjs` | Node.js 20 or newer |
+| Python | `examples/python/extract.py` | Python 3.9 or newer |
+| Go | `examples/go` | Go 1.22 or newer |
+
+The repository also includes usage, cached media and conversion examples. Clients send credentials only to the AmzDownloader origin, reject redirects and use request timeouts. Media download URLs must be fetched separately without the API key.
+
+No published SDK package is required. For AI clients, use the [MCP guide](/mcp-guide).

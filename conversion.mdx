@@ -1,0 +1,27 @@
+---
+title: "Convert a supported video to MP4"
+description: "Convert an Amazon video playlist to an MP4 URL, handle unsupported media and errors, and keep AmzDownloader credentials off download hosts."
+keywords: ["MP4", "m3u8", "conversion"]
+sidebarTitle: "Video conversion"
+---
+
+AmzDownloader converts a supported Amazon HTTPS `.m3u8` playlist URL to an MP4 URL. Start with a video returned by an extraction and confirm you have permission to use it.
+
+```bash
+curl --fail-with-body --max-time 60 \
+  'https://amzdownloader.com/api/v1/videos/convert' \
+  -H "Authorization: Bearer $AMZDOWNLOADER_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: replace-with-a-unique-conversion-id' \
+  --data '{"url":"REPLACE_WITH_AMAZON_HTTPS_M3U8_URL","country":"US"}'
+```
+
+The URL placeholder must be replaced with an actual supported playlist URL. `country` is optional and uses a two-letter country code.
+
+A successful conversion returns the MP4 location as `url`, a `source` field and cache metadata. Additional request or billing metadata can be present. Read the API reference for the complete response schema.
+
+## Download separately
+
+Download the returned MP4 URL without your AmzDownloader authorization header. Conversion costs one credit on success, including successful cached conversion responses. A failed conversion costs zero. Retry the identical conversion with its original idempotency key when the original response was lost.
+
+Only supported Amazon media URLs are accepted. Arbitrary websites, local files, internal network addresses and non-HTTPS URLs are outside this endpoint's contract. Direct MP4 source URLs do not need playlist conversion. Conversion can fail or time out; do not retry indefinitely.

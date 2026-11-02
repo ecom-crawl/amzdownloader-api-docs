@@ -1,0 +1,137 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "AmzDownloader",
+  "theme": "almond",
+  "description": "Extract Amazon product images and videos through the AmzDownloader API and MCP tools.",
+  "colors": {
+    "primary": "#C9320A",
+    "light": "#FF9352",
+    "dark": "#993308"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://amzdownloader.com"
+  },
+  "favicon": "/logo/icon.svg",
+  "fonts": {
+    "family": "Inter"
+  },
+  "background": {
+    "color": {
+      "light": "#FBFAF7",
+      "dark": "#160D08"
+    }
+  },
+  "api": {
+    "openapi": "openapi.json",
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": [
+        "bash",
+        "javascript",
+        "python",
+        "go"
+      ],
+      "defaults": "required",
+      "prefill": false,
+      "autogenerate": true
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "extraction",
+              "cache",
+              "conversion",
+              "mcp-guide",
+              "examples"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "usage",
+              "errors",
+              "changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "openapi": "openapi.json",
+        "groups": [
+          {
+            "group": "Media extraction",
+            "pages": [
+              "POST /scrapes",
+              "GET /scrapes/{jobId}",
+              "GET /scrapes/{jobId}/result",
+              "GET /products/{asin}/media"
+            ]
+          },
+          {
+            "group": "Video conversion",
+            "pages": [
+              "POST /videos/convert"
+            ]
+          },
+          {
+            "group": "Account",
+            "pages": [
+              "GET /usage"
+            ]
+          },
+          {
+            "group": "Availability",
+            "pages": [
+              "GET /health",
+              "GET /capabilities",
+              "GET /openapi.json"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/ecom-crawl/amzdownloader-api-docs"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://amzdownloader.com/dashboard"
+    }
+  },
+  "footer": {
+    "socials": {
+      "website": "https://amzdownloader.com",
+      "github": "https://github.com/ecom-crawl"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://amzdownloader.com/docs"
+    }
+  }
+}

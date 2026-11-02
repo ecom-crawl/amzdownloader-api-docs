@@ -1,0 +1,24 @@
+---
+title: "Authenticate with an API key"
+description: "Use an AmzDownloader API key safely with REST and MCP, keep credentials on your server, and understand rejected or revoked key responses."
+keywords: ["API key", "Bearer", "authentication"]
+sidebarTitle: "Authentication"
+---
+
+AmzDownloader uses the same account API key for REST and MCP. Create or select a key in your [dashboard](https://amzdownloader.com/dashboard), then send it in the `Authorization` header.
+
+```http
+Authorization: Bearer YOUR_AMZDOWNLOADER_API_KEY
+```
+
+## Keep credentials private
+
+Store keys in environment variables or your client's secret store. Do not put keys in source control, URL parameters, browser applications, analytics, or screenshots. Send your key only to `https://amzdownloader.com`. Media download URLs do not need your AmzDownloader key.
+
+A key grants access to its own jobs. A different customer's job ID does not grant access to that job. Retain the key used to submit an extraction when polling it and reading its result.
+
+## Handle rejected keys
+
+A missing, invalid or revoked key returns HTTP `401`. Check that the environment variable is present and that you sent one supported credential header. HTTP `403` means the request is authenticated but access is denied.
+
+Read [errors and retries](/errors) before retrying a failed request. MCP connection instructions are in the [agent guide](/mcp-guide).
