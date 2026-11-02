@@ -19,3 +19,6 @@ Public REST base: https://amzdownloader.com/api/v1. Hosted MCP: https://amzdownl
 
 ## Assumptions
 The documentation audience prioritizes a single-product workflow before bulk automation. No bulk endpoint, OAuth or published npm package is promised by this release. Deployment availability must be verified separately from this source content.
+
+## Visual identity
+Use the dashboard palette: brand orange `#FE6320`, light orange `#FF9352`, dark ink `#160D08` for primary buttons, and white `#FFFFFF` for the light background. Keep these values aligned with the dashboard tokens in `amzdownloader-com/tailwind.config.js`.

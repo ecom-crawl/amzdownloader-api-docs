@@ -4,9 +4,9 @@
   "theme": "almond",
   "description": "Extract Amazon product images and videos through the AmzDownloader API and MCP tools.",
   "colors": {
-    "primary": "#C9320A",
+    "primary": "#FE6320",
     "light": "#FF9352",
-    "dark": "#993308"
+    "dark": "#160D08"
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -19,7 +19,7 @@
   },
   "background": {
     "color": {
-      "light": "#FBFAF7",
+      "light": "#FFFFFF",
       "dark": "#160D08"
     }
   },
