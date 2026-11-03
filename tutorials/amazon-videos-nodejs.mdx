@@ -1,0 +1,114 @@
+---
+title: "Download Amazon product videos with Node.js"
+description: "Extract Amazon product videos with Node.js, poll queued jobs safely, inspect source metadata, and optionally convert one HLS playlist into MP4."
+keywords: ["Amazon videos", "Node.js", "MP4", "tutorial"]
+sidebarTitle: "Videos with Node.js"
+---
+
+Use AmzDownloader to extract product-gallery videos and save their metadata with Node.js. You can then download one direct MP4 or explicitly request conversion of one supported Amazon HLS playlist. The example keeps extraction and conversion as separate credit-consuming operations.
+
+## Prepare the example
+
+You need Node.js 20 or newer, an [API key](https://amzdownloader.com/dashboard/api-keys), and permission to use the media. Clone the runnable files:
+
+```bash
+git clone https://github.com/ecom-crawl/amzdownloader-api-docs.git
+cd amzdownloader-api-docs
+export AMZDOWNLOADER_API_KEY="YOUR_AMZDOWNLOADER_API_KEY"
+export AMZDOWNLOADER_IDEMPOTENCY_KEY="videos-my-product-001"
+node examples/node/download-videos.mjs \
+  'https://www.amazon.com/dp/B0CRY1MG68' './amazon-videos'
+```
+
+Without `--convert`, the script saves metadata and downloads a direct MP4 if one is available. If Amazon exposes only HLS playlists, it saves the metadata without charging for conversion. To authorize conversion of one playlist, add the explicit flag:
+
+```bash
+node examples/node/download-videos.mjs \
+  'https://www.amazon.com/dp/B0CRY1MG68' './amazon-videos-converted' --convert
+```
+
+Keep the same operation ID when retrying the identical extraction. Use a new ID for a different product or extraction settings. This tutorial limits the ID to 80 characters so the separate `:mp4` conversion suffix also fits the API's idempotency header limit.
+
+## Run the complete workflow
+
+The bundled `client.mjs` sends credentials only to AmzDownloader, rejects redirects and applies request timeouts. The extraction call enables `productVideos` and disables the other groups. It accepts either an immediate completed response or a queued job, with at most 20 polls separated by three seconds.
+
+```javascript download-videos.mjs
+import {mkdir, writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createClient, jobPath} from './client.mjs';
+
+export async function extractVideos(request, url, operationId, {wait = ms => new Promise(resolve => setTimeout(resolve, ms)), maxPolls = 20} = {}) {
+  const created = await request('POST', '/scrapes', {
+    url, renderMode: 'auto',
+    include: {productImages: false, variantImages: false, productVideos: true, relatedVideos: false, creatorVideos: false},
+  }, operationId);
+  if (created.status === 200 && created.data.status === 'completed') return created.data;
+  if (created.status !== 202) throw new Error('Expected completed media or a queued job');
+  const jobId = created.data.jobId;
+  const route = jobPath(jobId, '/result');
+  console.error(`Save this job ID: ${jobId}`);
+  for (let poll = 0; poll < maxPolls; poll++) {
+    await wait(3000);
+    const response = await request('GET', route);
+    if (response.status === 200 && response.data.status === 'completed') return response.data;
+    if (response.status !== 202 || !['queued', 'processing'].includes(response.data.status)) throw new Error(`Extraction stopped; inspect job ${jobId}`);
+  }
+  throw new Error(`Polling limit reached; check saved job ${jobId}`);
+}
+export async function selectDownload(request, result, operationId, convert = false) {
+  const videos = result.data.media.productVideos;
+  const direct = videos.find(video => {try {const url = new URL(video.src);return url.protocol === 'https:' && url.pathname.toLowerCase().endsWith('.mp4');} catch {return false;}});
+  if (direct) return {url: direct.src, converted: false};
+  if (!convert) return null;
+  const hls = videos.find(video => {try {const url = new URL(video.src);return url.protocol === 'https:' && (url.hostname === 'm.media-amazon.com' || url.hostname.endsWith('.media-amazon.com')) && url.pathname.toLowerCase().endsWith('.m3u8');} catch {return false;}});
+  if (!hls) return null;
+  const response = await request('POST', '/videos/convert', {url: hls.src}, `${operationId}:mp4`);
+  return {url: response.data.url, converted: true};
+}
+export async function downloadMp4(url, target, fetcher = fetch) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port) throw new Error('Expected an HTTPS download URL');
+  // Returned media downloads never receive the AmzDownloader API key.
+  const response = await fetcher(parsed, {redirect: 'error', signal: AbortSignal.timeout(60000)});
+  if (!response.ok || !response.body) throw new Error('Video download failed');
+  const chunks = []; let bytes = 0;
+  for await (const chunk of response.body) {
+    bytes += chunk.byteLength;
+    if (bytes > 64 * 1024 * 1024) throw new Error('Video exceeds this example\'s 64 MB download limit');
+    chunks.push(Buffer.from(chunk));
+  }
+  await writeFile(target, Buffer.concat(chunks), {flag: 'wx'});
+}
+async function main() {
+  const [url, outputDirectory, option] = process.argv.slice(2);
+  if (!url || !outputDirectory || (option && option !== '--convert')) throw new Error('Usage: node examples/node/download-videos.mjs PRODUCT_URL OUTPUT_DIRECTORY [--convert]');
+  const operationId = process.env.AMZDOWNLOADER_IDEMPOTENCY_KEY;
+  if (!operationId || !/^[!-~]{1,80}$/.test(operationId)) throw new Error('Set a stable AMZDOWNLOADER_IDEMPOTENCY_KEY with 1 to 80 printable non-space characters');
+  const request = createClient();
+  const result = await extractVideos(request, url, operationId);
+  await mkdir(outputDirectory, {recursive: true});
+  await writeFile(path.join(outputDirectory, 'media-result.json'), JSON.stringify(result, null, 2));
+  const selected = await selectDownload(request, result, operationId, option === '--convert');
+  if (selected) await downloadMp4(selected.url, path.join(outputDirectory, 'video-001.mp4'));
+  console.log(JSON.stringify({productVideos: result.data.media.productVideos.length, downloaded: Boolean(selected), converted: selected?.converted ?? false, warnings: result.data.warnings}, null, 2));
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(error => {console.error(error.message);process.exitCode = 1;});
+```
+
+The script writes `media-result.json` before attempting a download. A successful selected download is saved as `video-001.mp4`; that file is not overwritten. The 64 MB download limit and polling budget belong to this example. They are not promises about maximum source-video size or extraction latency.
+
+## Understand the media response
+
+Read `data.media.productVideos` for the requested product-gallery group. Each item can include `title`, `cover`, `src`, `duration`, `group`, `contentType` and optional creator metadata. Read `data.source.asin`, `data.source.marketplace`, `data.source.fetchedAt`, `data.counts` and `data.warnings` alongside it.
+
+Related, customer-review and creator videos can be classified separately. This example does not request related or creator groups. To include them, deliberately change the request flags and inspect each video's `group`; do not assume that every returned video depicts the selected product.
+
+## Keep conversion and download separate
+
+A supported `.m3u8` conversion request uses `POST /videos/convert`. Its MP4 download location is the response's top-level `url`, not `data.url`. A direct MP4 source does not need conversion. Download the returned URL without an AmzDownloader authorization header.
+
+One successful extraction costs one credit, including a cache hit. One successful conversion costs one additional credit, including a cached conversion. Polling, owned result reads, failures and identical idempotent replays add no credits. If a download fails after the API succeeded, use the saved metadata before requesting more work.
+
+If polling ends locally, retain the printed job ID and check its status later. Do not submit a new extraction simply to check progress. See the [conversion API overview](https://amzdownloader.com/api/amazon-video-converter), [conversion guide](/conversion), [errors](/errors), the [video API overview](https://amzdownloader.com/api/amazon-video-downloader) and the [public examples repository](https://github.com/ecom-crawl/amzdownloader-api-examples).

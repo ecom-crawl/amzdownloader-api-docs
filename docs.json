@@ -64,6 +64,23 @@
             ]
           },
           {
+            "group": "Tutorials",
+            "pages": [
+              "tutorials/amazon-images-python",
+              "tutorials/amazon-videos-nodejs",
+              "tutorials/multiple-product-urls"
+            ]
+          },
+          {
+            "group": "MCP clients",
+            "pages": [
+              "clients/claude-code",
+              "clients/cursor",
+              "clients/vscode",
+              "clients/codex"
+            ]
+          },
+          {
             "group": "Reference",
             "pages": [
               "usage",

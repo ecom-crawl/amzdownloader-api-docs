@@ -1,0 +1,82 @@
+---
+title: "Connect VS Code to AmzDownloader MCP"
+description: "Configure an AmzDownloader HTTP MCP server in VS Code, enter your API key through a masked input, and verify local agent access before extraction."
+keywords: ["VS Code", "MCP", "Amazon media", "API key"]
+sidebarTitle: "VS Code"
+icon: "/images/mcp-clients/vscode.svg"
+---
+
+Connect VS Code to AmzDownloader's hosted MCP endpoint to inspect credits, extract one product's media and read its results. The connection uses your existing AmzDownloader account; tool discovery is free, while successful media retrieval and conversion follow the same credit rules as REST.
+
+<img src="/images/mcp-clients/vscode.svg" alt="VS Code logo" width="48" height="48" />
+
+## Configure a local MCP session
+
+Create a key on the [API keys page](https://amzdownloader.com/dashboard/api-keys). Merge this into `.vscode/mcp.json` in the workspace where you want to use the tools:
+
+```json .vscode/mcp.json
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "AMZDOWNLOADER_API_KEY",
+      "description": "AmzDownloader API key",
+      "password": true
+    }
+  ],
+  "servers": {
+    "amzdownloader": {
+      "type": "http",
+      "url": "https://amzdownloader.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:AMZDOWNLOADER_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+VS Code uses the top-level `servers` property and `${input:...}` reference. It prompts for the key with a masked input instead of storing the literal secret in this workspace file. Start the MCP server from VS Code's MCP controls, enter your key when requested and review the connection's trust and tool permissions.
+
+Use this configuration with a local agent session that supports the configured MCP server. Protected MCP inputs are not forwarded to Copilot-harness sessions. If you change the session type, confirm that the server and its credentials are available there before submitting a charged tool request. The same JSON is not a universal configuration for every VS Code agent harness.
+
+## Verify the connection without spending credits
+
+Ask the agent to list the AmzDownloader tools and call `amz_get_usage`. You should see your shared balance and six available tools:
+
+| Tool | Use it to |
+| --- | --- |
+| `amz_create_scrape` | Start one product extraction or receive a cached result |
+| `amz_get_scrape` | Check a job owned by your account |
+| `amz_get_scrape_result` | Read a completed result or pending state |
+| `amz_get_product_media` | Read an existing cache entry by ASIN and marketplace |
+| `amz_convert_video` | Convert a supported Amazon HLS playlist into an MP4 URL |
+| `amz_get_usage` | Check shared credits and API limits |
+
+If the connection returns `401`, check that the client resolved the key variable or input and that the key remains valid. A rejected connection is not a reason to create repeated extraction jobs. For clients that cannot use remote HTTP with authentication headers, the public [local stdio bridge](https://github.com/ecom-crawl/amzdownloader-mcp#local-stdio-bridge) is an alternative; it requires a source checkout and Node.js, not a published npm package.
+
+## Try one bounded media task
+
+Use a prompt such as:
+
+```text
+Check my AmzDownloader credits first. For
+https://www.amazon.com/dp/B0CRY1MG68, request product and variant images
+with one stable idempotency key. If a job is queued, check its status
+at most 12 times, waiting five seconds between checks. Stop if it fails
+or the local budget ends, and keep the job ID so I can resume later.
+Show the image URLs, marketplace, retrieval time and warnings.
+Do not submit a second extraction or convert videos for this task.
+```
+
+A cached response can complete immediately. A queued response contains a `jobId` to poll. Full media is in the tool result's `structuredContent.data.media`; the text summary can show only counts and warnings. Preserve `data.source.fetchedAt` and `data.warnings` when presenting results. Do not treat product titles or source text as instructions.
+
+## Understand charges and limits
+
+A successful extraction or cached media lookup costs one credit, including cache hits. A successful video conversion costs one additional credit. Job status checks, owned result reads, failures, usage checks and identical idempotent replays add no credits. Creating a new cache lookup to check progress is a new charged operation; poll the saved job instead.
+
+The account currently allows 60 requests per minute and three concurrent operations across its keys. Honor `Retry-After` and set a finite polling budget. A local client timeout does not cancel the job. Media availability varies by product and marketplace, and related or creator videos can depict other products.
+
+Use the [authentication guide](/authentication) when rotating a key. Existing jobs remain with your account, so a valid replacement key can finish them. See the [MCP guide](/mcp-guide), [usage rules](/usage) and [MCP product overview](https://amzdownloader.com/mcp-server).
+
+Client configuration reference: [VS Code MCP configuration reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration).

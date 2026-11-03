@@ -5,7 +5,7 @@ keywords: ["API key", "Bearer", "authentication"]
 sidebarTitle: "Authentication"
 ---
 
-AmzDownloader uses the same account API key for REST and MCP. Create or select a key in your [dashboard](https://amzdownloader.com/dashboard), then send it in the `Authorization` header.
+AmzDownloader uses the same account API key for REST and MCP. Create or select a key in your [API keys page](https://amzdownloader.com/dashboard/api-keys), then send it in the `Authorization` header.
 
 ```http
 Authorization: Bearer YOUR_AMZDOWNLOADER_API_KEY
@@ -15,7 +15,13 @@ Authorization: Bearer YOUR_AMZDOWNLOADER_API_KEY
 
 Store keys in environment variables or your client's secret store. Do not put keys in source control, URL parameters, browser applications, analytics, or screenshots. Send your key only to `https://amzdownloader.com`. Media download URLs do not need your AmzDownloader key.
 
-A key grants access to its own jobs. A different customer's job ID does not grant access to that job. Retain the key used to submit an extraction when polling it and reading its result.
+Jobs belong to your account. A valid replacement key for the same account can poll and retrieve jobs created before rotation. Another customer's key cannot access your jobs even if that customer knows the job ID.
+
+## Rename, rotate or revoke a key
+
+Use the row menu on the [API keys page](https://amzdownloader.com/dashboard/api-keys) to rename, rotate or revoke a key. Renaming changes its label. Rotation creates a replacement whose secret is shown once; store it in your secret manager and update your integrations.
+
+The previous key remains valid for 24 hours after rotation unless you revoke it sooner. Revocation stops that key immediately. You can use the replacement to finish existing jobs because their ownership stays with your account. Accounts can have ten still-valid keys, including keys within their rotation overlap. If you reach the limit, revoke an unused key before creating or rotating another.
 
 ## Handle rejected keys
 

@@ -22,3 +22,9 @@ The documentation audience prioritizes a single-product workflow before bulk aut
 
 ## Visual identity
 Use the dashboard palette: brand orange `#FE6320`, light orange `#FF9352`, dark ink `#160D08` for primary buttons, and white `#FFFFFF` for the light background. Keep these values aligned with the dashboard tokens in `amzdownloader-com/tailwind.config.js`.
+
+## Tutorials and client setup
+The documentation now includes complete Python image, Node.js video, and sequential multi-product workflows. Multi-product work means bounded iteration over single-product requests, not a bulk endpoint. Client guides cover Claude Code, Cursor, VS Code, and Codex using their documented HTTP MCP configuration and secret-variable mechanisms. The developer marketing pages introduce these workflows; these docs explain how to run them.
+
+## API key lifecycle
+Customer jobs belong to the account and remain accessible after key rotation. Rotation creates a replacement while the previous key remains valid for 24 hours, unless revoked sooner. Ten still-valid keys per account includes keys within this overlap.

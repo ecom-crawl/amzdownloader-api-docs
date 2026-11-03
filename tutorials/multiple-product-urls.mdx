@@ -1,0 +1,85 @@
+---
+title: "Process multiple Amazon product URLs"
+description: "Process a short list of Amazon URLs sequentially, preserve a retry key per product, save checkpoints, and keep request counts and credit use bounded."
+keywords: ["multiple product URLs", "sequential requests", "idempotency", "tutorial"]
+sidebarTitle: "Multiple URLs"
+---
+
+Use AmzDownloader to process a short, known list of product URLs by calling the single-product API once per item. This tutorial is bounded iteration in your application. It does not use a batch endpoint, discover product URLs, or schedule recurring jobs.
+
+## Prepare a small input list
+
+You need Node.js 20 or newer and an [API key](https://amzdownloader.com/dashboard/api-keys). Clone the runnable documentation examples and save `urls.json` in that checkout:
+
+```bash
+git clone https://github.com/ecom-crawl/amzdownloader-api-docs.git
+cd amzdownloader-api-docs
+export AMZDOWNLOADER_API_KEY="YOUR_AMZDOWNLOADER_API_KEY"
+export AMZDOWNLOADER_RUN_ID="catalog-review-001"
+```
+
+```json urls.json
+[
+  "https://www.amazon.com/dp/B0CRY1MG68",
+  "https://www.amazon.com/dp/B0F3GWXLTS"
+]
+```
+
+Replace these example URLs with products you need. The script accepts one to ten HTTPS URLs and rejects exact duplicates. Canonicalize and deduplicate equivalent product links in your own input preparation as well; two differently formatted links can identify the same product.
+
+## Process one product at a time
+
+Run the example with a stable run ID:
+
+```bash
+node examples/node/multiple-product-urls.mjs urls.json results.json
+```
+
+Each product gets a separate idempotency key, such as `catalog-review-001:1`. The script waits for a product's cached or queued extraction to complete before submitting the next. Its public `client.mjs` helper handles `200` and `202`, polls at most 20 times per product at three-second intervals, rejects redirects and sets per-request timeouts.
+
+```javascript multiple-product-urls.mjs
+import {readFile, writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createClient, extract} from './client.mjs';
+
+export async function collectProducts(request, urls, runId, checkpoint = async () => {}) {
+  if (!Array.isArray(urls) || urls.length < 1 || urls.length > 10 || !urls.every(url => typeof url === 'string' && url.startsWith('https://'))) throw new Error('Provide a JSON array containing 1 to 10 HTTPS product URLs');
+  if (!/^[!-~]{1,80}$/.test(runId)) throw new Error('Use a stable run ID with 1 to 80 printable non-space characters');
+  if (new Set(urls).size !== urls.length) throw new Error('Remove duplicate URLs before starting');
+  const results = [];
+  for (const [index, url] of urls.entries()) {
+    // Sequential iteration over the single-product endpoint, with no bulk API.
+    const operationId = `${runId}:${index + 1}`;
+    const media = await extract(request, url, {idempotencyKey: operationId, maxPolls: 20});
+    results.push({inputUrl: url, operationId, result: media});
+    await checkpoint({runId, urls, results});
+  }
+  return results;
+}
+async function main() {
+  const [input, output] = process.argv.slice(2);
+  const runId = process.env.AMZDOWNLOADER_RUN_ID;
+  if (!input || !output || !runId) throw new Error('Usage: AMZDOWNLOADER_RUN_ID=stable-id node examples/node/multiple-product-urls.mjs urls.json results.json');
+  const urls = JSON.parse(await readFile(input, 'utf8'));
+  const results = await collectProducts(createClient(), urls, runId, state => writeFile(output, JSON.stringify(state, null, 2)));
+  console.log(JSON.stringify({completedProducts: results.length, output}));
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(error => {console.error(error.message);process.exitCode = 1;});
+```
+
+The complete response for every successful item is stored in `results.json` after that item finishes. The checkpoint contains the input list and logical operation IDs, never your API key. Read product media from each item's `result.data.media`, source details from `result.data.source` and limitations from `result.data.warnings`.
+
+## Resume without creating duplicate charges
+
+If the script stops, keep the same input list, order and `AMZDOWNLOADER_RUN_ID` when rerunning it. Completed requests replay with their original idempotency keys and do not charge another credit. A pending request can return its existing job ID. If the helper prints a job ID when its polling budget expires, you can inspect that job directly rather than restart the loop.
+
+Changing an input while keeping its old operation ID can return `409`. Use a new run ID for a genuinely new list or changed request settings. Do not automatically start a fresh run after a timeout. The script stops on an error rather than silently retrying a charged operation.
+
+## Budget credits and account limits
+
+For two new successful extractions, budget two credits. Each successful product retrieval costs one credit even when it returns cached media. Polling, owned result reads and identical idempotent replays add no credits. This script does not convert videos; adding successful video conversions would cost one extra credit each.
+
+Current account limits are 60 requests per minute and three concurrent operations across API keys. Sequential processing keeps this example to one operation at a time, but other applications using the account still share those limits. Honor a returned `Retry-After` and investigate `402`, `409`, `429` or source errors before resuming. A local polling limit does not cancel a server job.
+
+Use a fresh cache read only when you intend a separate media retrieval. `GET /products/{asin}/media` does not start extraction on a miss. For freshness and coverage, retain `fetchedAt`, marketplace and warnings for each item. See [usage](/usage), [cache](/cache) and the [API overview](https://amzdownloader.com/api).
